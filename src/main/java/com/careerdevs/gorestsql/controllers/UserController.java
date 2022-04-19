@@ -3,6 +3,8 @@ package com.careerdevs.gorestsql.controllers;
 import com.careerdevs.gorestsql.models.User;
 import com.careerdevs.gorestsql.repos.UserRepository;
 import com.careerdevs.gorestsql.utils.ApiErrorHandling;
+import com.careerdevs.gorestsql.validation.UserValidation;
+import com.careerdevs.gorestsql.validation.ValidationError;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -104,9 +106,13 @@ public class UserController {
             long totalUsers = userRepository.count();
             userRepository.deleteAll();
 
-            return new ResponseEntity<>("Users Delete: " + totalUsers, HttpStatus.OK);
+            return new ResponseEntity<>("Users Deleted: " + totalUsers, HttpStatus.OK);
 
         } catch (HttpClientErrorException e) {
+
+            return ApiErrorHandling.customApiError(e.getMessage(), e.getStatusCode());
+
+        } catch (Exception e) {
 
             return ApiErrorHandling.genericApiError(e);
 
@@ -134,7 +140,7 @@ public class UserController {
 
              if(foundUser == null) {
 
-                 throw new HttpClientErrorException(HttpStatus.NOT_FOUND, " User with ID: " + uID + " not found");
+                 throw new HttpClientErrorException(HttpStatus.NOT_FOUND, "User with ID: " + uID + " not found");
 
              }
 
@@ -157,6 +163,14 @@ public class UserController {
     public ResponseEntity<?> createNewUser (@RequestBody User newUser) {
         try {
 
+            ValidationError newUserErrors = UserValidation.validateUser(newUser, userRepository, false);
+
+            if(newUserErrors.hasError()) {
+
+                throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, newUserErrors.toString());
+
+            }
+
             User savedUser = userRepository.save(newUser);
 
             return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
@@ -175,6 +189,14 @@ public class UserController {
     @PutMapping("/")
     public ResponseEntity<?> updateUser (@RequestBody User updateUser) {
         try{
+
+            ValidationError newUserErrors = UserValidation.validateUser(updateUser, userRepository, true);
+
+            if(newUserErrors.hasError()) {
+
+                throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, newUserErrors.toString());
+
+            }
 
             User savedUser = userRepository.save(updateUser);
 
